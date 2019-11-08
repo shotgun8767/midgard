@@ -1,0 +1,9 @@
+
+<!-- 导入 JS 文件 -->
+{if isset($js) && $js}
+    {foreach ($js as $item)}
+        <script type="text/javascript" src="{$item}"></script>
+    {/foreach}
+{/if}
+
+</html>

@@ -1,0 +1,15 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="{$charset}">
+    <title>{$title}</title>
+
+    <!-- 导入 CSS 文件 -->
+    {if ($css)}
+        {foreach ($css as $item)}
+            <link rel="stylesheet" type="text/css" href="{$item}">
+        {/foreach}
+    {/if}
+</head>
+<body>
