@@ -405,19 +405,24 @@ class BaseModel extends Model
     }
 
     /**
+     * 关联预载入
      * @param $with
      * @return BaseModel
      */
     public function baseWith($with) : self
     {
+//        foreach ($with as $name => $content) {
+//
+//        }
+
         $this->getQuery()->with($with);
         return $this;
     }
 
     /**
      * 联合查询
-     * @param $alias
-     * @param $join
+     * @param string $alias 当前模型别名
+     * @param array $join   join方式
      * @return BaseModel
      */
     public function baseJoin(string $alias, array $join) : self

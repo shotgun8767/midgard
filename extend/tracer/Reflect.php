@@ -91,12 +91,12 @@ class Reflect
     public function __construct($var, $method = null)
     {
         if (is_string($var)) {
-            if (!$method) {
-                if (function_exists($var)) {
-                    $this->Function = new ReflectionFunction($var);
-                } else {
-                    throw new FunctionNotFoundException($var);
-                }
+                    if (!$method) {
+                        if (function_exists($var)) {
+                            $this->Function = new ReflectionFunction($var);
+                        } else {
+                            throw new FunctionNotFoundException($var);
+                        }
             } else {
                 if (class_exists($var)) {
                     $this->Class = new ReflectionClass($var);

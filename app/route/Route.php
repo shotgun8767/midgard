@@ -62,7 +62,7 @@ class Route extends exRoute
         $param = $array['param']??[];
         $post = $array['post']??[];
 
-        $n = function (array $array) {
+        $n = function (array $array) : array {
             $r = [];
             foreach ($array as $name => $arr) {
                 if (isset($arr['validate'])) {
@@ -73,36 +73,17 @@ class Route extends exRoute
             return $r;
         };
 
-        $this->validate['param'] = $n($param);
-        $this->validate['post'] = $n($post);
+        $this->setValidate($n($param), $n($post));
 
         # 获取最低访问权限
-        $this->permission = $array['permission']??null;
+        $this->setPermission($array['permission']??null);
 
         # 获取路由地址
-        $this->route = $array['route']??'';
+        $this->setRoute($array['route']??'');
 
         # 获取路由模板并进行处理
-        $this->rulePattern = $array['rule_pattern']??[];
-        $this->rulePattern = array_map(function ($regex) {
-            if (strpos($regex, '@') !== false) {
-                $sp = explode('@', $regex);
-                $regex = '/^[]/';
-                foreach ($sp as $item) {
-                    $item = trim($item);
-                    switch ($item) {
-                        case 'id' : $regex = '\d+'; break 2;
-                        case 'en' : $item = 'a-zA-Z'; break;
-                        case 'l'  : $item = 'a-z'; break;
-                        case 'u'  : $item = 'A-Z'; break;
-                        case 'n'  : $item = '0-9';break;
-                        default : $item = '';
-                    }
-                    $regex = "/^[$item" . substr($regex, 4);
-                }
-            }
-            return $regex;
-        }, $this->rulePattern);
+        $this->setRulePattern($array['rule_pattern']??[]);
+
     }
 
     /**
@@ -143,12 +124,19 @@ class Route extends exRoute
 
     /**
      * 设置校验内容
-     * @param array $_
+     * @param array $param
+     * @param array $post
      * @return Route
      */
-    public function setValidate(array $_) : self
+    public function setValidate(array $param = [], array $post = []) : self
     {
-        $this->validate = $_;
+        if ($param) {
+            $this->validate['param'] = $param;
+        }
+        if ($post) {
+            $this->validate['post'] = $post;
+        }
+
         return $this;
     }
 
@@ -181,7 +169,26 @@ class Route extends exRoute
      */
     public function setRulePattern(array $_) : self
     {
-        $this->rulePattern = $_;
+        $this->rulePattern = array_map(function ($regex) {
+            if (strpos($regex, '@') !== false) {
+                $sp = explode('@', $regex);
+                $regex = '/^[]/';
+                foreach ($sp as $item) {
+                    $item = trim($item);
+                    switch ($item) {
+                        case 'id' : $regex = '\d+'; break 2;
+                        case 'en' : $item = 'a-zA-Z'; break;
+                        case 'l'  : $item = 'a-z'; break;
+                        case 'u'  : $item = 'A-Z'; break;
+                        case 'n'  : $item = '0-9';break;
+                        default : $item = '';
+                    }
+                    $regex = "/^[$item" . substr($regex, 4);
+                }
+            }
+            return $regex;
+        }, $_);
+
         return $this;
     }
 }

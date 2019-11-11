@@ -19,8 +19,6 @@ class ApiCore
      */
     protected $Reflect;
 
-    protected $Method;
-
     /**
      * 请求参数（包括PARAM和POST）
      * @var array

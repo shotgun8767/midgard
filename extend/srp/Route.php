@@ -61,11 +61,22 @@ class Route
      * @param string $method
      * @param string $rule
      */
-    public function __construct(string $controller, string $method, string $rule)
+    public function __construct(string $controller, string $method = 'get', string $rule = '')
     {
         $this->controller = $controller;
         $this->method = $method;
         $this->rule = $rule;
+    }
+
+    /**
+     * @param string $controller
+     * @param string $method
+     * @param string $rule
+     * @return static
+     */
+    public static function new(string $controller, string $method = 'get', string $rule = '')
+    {
+        return new static($controller, $method, $rule);
     }
 
     /**
@@ -91,7 +102,7 @@ class Route
         return $instance;
     }
 
-    public function afterParse(array $array){}
+    public function afterParse(array $array) {}
 
     /**
      * 转化为数组
@@ -128,6 +139,8 @@ class Route
         foreach ($_ as $name => $item) {
             if (is_array($item)) {
                 $this->param[$name] = Param::parse($item);
+            } elseif ($item instanceof Param) {
+                $this->param[$name] = $item;
             }
         }
         return $this;
@@ -138,6 +151,8 @@ class Route
         foreach ($_ as $name => $item) {
             if (is_array($item)) {
                 $this->post[$name] = Param::parse($item);
+            } elseif ($item instanceof Param) {
+                $this->param[$name] = $item;
             }
         }
         return $this;
