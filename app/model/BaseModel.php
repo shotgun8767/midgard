@@ -22,16 +22,16 @@ class BaseModel extends Model
     protected const BASE_WITH_WITH_NAME = 'with';
 
     /**
-     * 是否将获取的模型转化为数组
+     * 是否自动将获取的模型转化为数组
      * @var bool
      */
     protected $toArray = false;
 
     /**
-     * 可更新字段
+     * 允许被更新字段（null表示无限制）
      * @var array
      */
-    protected $updatedFields = [];
+    protected $updatedFields = null;
 
     /**
      * 是否获取多条信息
@@ -40,7 +40,7 @@ class BaseModel extends Model
     protected $multi = false;
 
     /**
-     * 查询数量
+     * 查询数量(null表示无数量限制)
      * @var int|null
      */
     protected $limit = null;
@@ -645,7 +645,7 @@ class BaseModel extends Model
     }
 
     /**
-     * 将模型转化为素组
+     * 将模型转化为数组
      * @param $models
      * @return array
      */

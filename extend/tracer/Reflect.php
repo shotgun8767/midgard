@@ -19,7 +19,7 @@ use tracer\exception\MethodNotFoundException;
  * Class Reflect
  * @package tracer
  * @author shotgun8767
- * @version 1.2.5
+ * @version 1.2.6
  *
  * @example <function>
  * function add(num1, num2) {return (num1 + num2);}
@@ -91,12 +91,12 @@ class Reflect
     public function __construct($var, $method = null)
     {
         if (is_string($var)) {
-                    if (!$method) {
-                        if (function_exists($var)) {
-                            $this->Function = new ReflectionFunction($var);
-                        } else {
-                            throw new FunctionNotFoundException($var);
-                        }
+            if (is_null($method)) {
+                if (function_exists($var)) {
+                    $this->Function = new ReflectionFunction($var);
+                } else {
+                    throw new FunctionNotFoundException($var);
+                }
             } else {
                 if (class_exists($var)) {
                     $this->Class = new ReflectionClass($var);
@@ -120,8 +120,6 @@ class Reflect
                 }
             }
         }
-
-        return null;
     }
 
     /**
@@ -162,15 +160,7 @@ class Reflect
      */
     public function getObject() : ?object
     {
-        if ($this->object) {
-            return $this->object;
-        } else {
-            if ($this->Class) {
-                return $this->instance();
-            }
-        }
-
-        return null;
+        return $this->object ? $this->object : ($this->Class ? $this->instance() : null);
     }
 
     /**
@@ -181,6 +171,17 @@ class Reflect
     public function hasMethod(string $name) : bool
     {
         return $this->Class && $this->Class->hasMethod($name);
+    }
+
+    /**
+     * whether method is accessible
+     * @param string $name
+     * @return bool
+     * @throws ReflectionException
+     */
+    public function methodAccessible(string $name) : bool
+    {
+        return $this->hasMethod($name) && $this->Class->getMethod($name)->isPublic();
     }
 
     /**
@@ -365,7 +366,7 @@ class Reflect
     }
 
     /**
-     * bind params
+     * bind arguments
      * @param ReflectionMethod|ReflectionFunction $reflect
      * @param array $args arguments
      * @return array
