@@ -4,18 +4,22 @@ use app\route\{Route, RestfulRegister};
 use srp\component\Param;
 
 $Routes = [
-    Route::new('user', 'get', ':userId')
-        ->setRoute('getInfo')
-        //->setRulePattern(['userId' => '@id'])
+    Route::new('user', 'get', ':method')
+        ->setRoute('getOnMethod')
         ->setParam([
-            'userId' => Param::int(11)->setRequire(true)
+            'method' => Param::string()->setRequire(true)
         ]),
 
-    Route::new('picture', 'get', ':pictureId')
-        ->setRoute('getPicture')
-        ->setRulePattern(['pictureId' => '@id'])
+    Route::new('picture', 'get', ':method')
+        ->setRoute('getOnMethod')
         ->setParam([
-            'pictureId' => Param::int(11)
+            'method' => Param::string()->setRequire(true)
+        ]),
+
+    Route::new('album', 'get', ':method')
+        ->setRoute('getOnMethod')
+        ->setParam([
+            'method' => Param::string()->setRequire(true)
         ])
 ];
 

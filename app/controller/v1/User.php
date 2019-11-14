@@ -3,18 +3,24 @@
 namespace app\controller\v1;
 
 use app\api\BaseApi;
-use app\exception\UserException;
 use app\model\User as model;
 use sek\Package;
+use tracer\Reflect;
 
 class User extends BaseApi
 {
-    public function getInfo(int $userId)
+    public function getOnMethod(string $method)
     {
-        $res = (new model)->getInfo($userId);
+        $reflect = new Reflect(model::class, $method);
 
-        return $res ?
-            Package::ok('成功获取用户信息', $res) :
-            Package::error(UserException::class, 100001);
+        $res = $reflect();
+
+        if (!is_array($res)) {
+            $res = [
+                'result' => $res
+            ];
+        }
+
+        return Package::ok('成功！', $res);
     }
 }

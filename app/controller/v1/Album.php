@@ -2,12 +2,12 @@
 
 namespace app\controller\v1;
 
+use app\model\Album as model;
 use app\api\BaseApi;
-use app\model\Picture as model;
 use sek\Package;
 use tracer\Reflect;
 
-class Picture extends BaseApi
+class Album extends BaseApi
 {
     public function getOnMethod(string $method)
     {

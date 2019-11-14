@@ -15,11 +15,11 @@ class BaseModel extends Model
     use Status;
     use SoftDelete;
 
-    protected const FIELD_DEFAULT_NAME = 'default';
     protected const FIELD_HIDDEN_NAME = 'hidden';
-    protected const FIELD_NAME = 'field';
-    protected const HIDDEN_NAME = 'hidden';
-    protected const WITH_NAME = 'with';
+
+    protected const BASE_WITH_FIELD_NAME = 'field';
+    protected const BASE_WITH_HIDDEN_NAME = 'hidden';
+    protected const BASE_WITH_WITH_NAME = 'with';
 
     /**
      * 是否将获取的模型转化为数组
@@ -240,6 +240,10 @@ class BaseModel extends Model
         $this->whereBase($where);
         $models = $this->multi ? $this->querySelect() : $this->queryFind();
 
+        if ($this->limit && $models->count() > $this->limit) {
+            $models = $models->slice(0, $this->limit);
+        }
+
         return $models ? ($this->toArray ? $models->toArray() : $models) : null;
     }
 
@@ -405,22 +409,76 @@ class BaseModel extends Model
     }
 
     /**
-     * 关联预载入
-     * @param $with
+     * BASE关联预载入
+     * @param string|array $with
      * @return BaseModel
      */
     public function baseWith($with) : self
     {
-//        foreach ($with as $name => $content) {
-//
-//        }
+        $fieldsPro = function ($fields, string $pk) : array {
+            if (is_array($fields) && !empty($fields)) {
+                if (!in_array($pk, $fields)) {
+                    $fields[] = $pk;
+                }
+            }
 
+            return $fields;
+        };
+
+        $explodeTrim = function (string $str) {
+            return array_map('trim', explode(',', $str));
+        };
+
+        $pro = function (array &$withArray) use ($fieldsPro, &$pro, $explodeTrim) : void {
+            foreach ($withArray as $name => $content) {
+                if (is_string($name)) {
+                    if (is_string($content)) {
+                        $content = $explodeTrim($content);
+                    }
+
+                    if (is_array($content)) {
+                        $field  = $content[self::BASE_WITH_FIELD_NAME]??[];
+                        $hidden = $content[self::BASE_WITH_HIDDEN_NAME]??[];
+                        $with   = $content[self::BASE_WITH_WITH_NAME]??[];
+
+                        if (is_string($field)) {
+                            $field = $explodeTrim($field);
+                        }
+
+                        if (is_string($hidden)) {
+                            $hidden = $explodeTrim($hidden);
+                        }
+
+                        if (is_array($with) && !empty($with)) {
+                            $pro($with);
+                        }
+
+                        if ($field || $hidden || $with) {
+                            $withArray[$name] = function (BaseQuery $query) use ($field, $hidden, $with, $fieldsPro) {
+                                $query->field($fieldsPro($field, $query->getModel()->getPk()));
+                                $query->hidden($hidden);
+                                $query->with($with);
+                            };
+                        } else {
+                            $withArray[$name] = function (BaseQuery $query) use ($content, &$fieldsPro){
+                                $query->field($fieldsPro($content, $query->getModel()->getPk()));
+                            };
+                        }
+                    } else {
+                        unset($withArray[$name]);
+                        $withArray[] = $name;
+                    }
+                }
+            }
+        };
+
+        $pro($with);
         $this->getQuery()->with($with);
         return $this;
     }
 
     /**
-     * 联合查询
+     * BASE联合查询
      * @param string $alias 当前模型别名
      * @param array $join   join方式
      * @return BaseModel
@@ -431,9 +489,16 @@ class BaseModel extends Model
 
         if ($join) {
             foreach ($join as $table => $item) {
-                $alias = $item['alias'];
+                $_alias = $item['alias'];
+                $condition = $item['condition']??'';
+                if (is_array($condition)) {
+                    $key = key($condition);
+                    $value = $condition[$key];
+                    $condition = "$alias.$key=$_alias.$value";
+                }
+
                 /** @var Query $query */
-                $query->join([$table => $alias], $item['condition'], $item['type']??'INNER');
+                $query->join([$table => $_alias], $condition, $item['type']??'INNER');
             }
         }
 
