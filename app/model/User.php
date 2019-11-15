@@ -139,4 +139,117 @@ class User extends BaseModel
 
         return $res->toArray();
     }
+
+    /**
+     * 软删除
+     * @return int
+     */
+    public function softDeleteCase() : int
+    {
+        /**
+         * softDelete: 软删除，指不将指定记录从数据库中抹去，而只是改变指定记录中的某个字段
+         * 的值，获取记录时，不获取该数据
+         *
+         * 在BaseModel中有特性（trait）Status（详见app\model\traits\Status.php）
+         * 这个特性引入了一些规则，也是BaseModel的核心之一，具体使用方法如下：
+         *
+         * 1. 设定类属性statusField，默认为'status'。这个属性指的是该模型对应的表单中，表现状态（status）的字段名
+         * 2. 设定状态模板，默认模板为app\model\status\Model.php；如果有专属的状态模板，在app\model\status文件夹下，
+         *    添加与类名同名的类文件即可（格式见默认模板）；模板中规定了status字段取不同值时的意义，其中比较特殊的是
+         *    'DELETED'和'NORMAL'。'NORMAL'是默认的status，不声明目标的状态值时，只获取status值为'NORMAL'对应的
+         *    整形的记录；'DELETED'指的是软删除时（即调用'softDelete()'方法时），status字段的修改值。
+         * 3. 关闭status模式：该表单无需使用status模式，在类中添加$statusMode = true即可
+         */
+
+        // 软删除gender=0的所有记录
+        $where = ['gender' => 0];
+        $this->softDelete($where);  // softDelete()返回删除记录的数目
+
+        // 恢复gender=0的所有被删除的记录
+        $res = $this
+            ->refreshQuery()
+            ->status('DELETED')
+            ->updateStatus($where, 'NORMAL');   // updateStatus() 返回修改记录的数目
+
+        return $res;
+    }
+
+    /**
+     * 获取
+     * @return array|null
+     */
+    public function getStatusCase() : ?array
+    {
+        /**
+         * 获取status=1(NORMAL)或status=0(ABNORMAL)的两条记录
+         */
+
+        $res = $this
+            ->status(['NORMAL', 'ABNORMAL'])
+            ->multi(2)
+            ->getArray();
+
+        return $res;
+    }
+
+    /**
+     * 更新
+     * @return int
+     */
+    public function updateCase() : int
+    {
+        /**
+         * 对id=1的记录进行更新：gender字段值更新为0
+         */
+        $data = ['gender' => 0];
+        $res = $this
+            ->updates(1, $data);
+
+        // 另一种写法（比较清晰，推荐）
+//        $res = $this
+//            ->whereBase(1)
+//            ->updateStatus($data);
+
+        return $res;
+    }
+
+    /**
+     * 插入数据
+     * @return int
+     */
+    public function insertCase() : int
+    {
+        /**
+         * 插入一条数据，name=James, age=20, gender=1
+         */
+
+        $data = [
+            'name'      => 'James',
+            'age'       => 20,
+            'gender'    => 1
+        ];
+
+
+        # 插入数据status为默认的1（'NORMAL'）
+        $res = $this->inserts($data);   // 返回插入数据的主键值
+
+        # 插入数据，status为0（'ABNORMAL'）
+//        $res = $this->inserts($data, 'ABNORMAL');
+
+        # 先按$replaceWhen搜索记录，如果匹配，则将该记录的status更新为指定值；若找不到，则添加记录
+//        $replaceWhen = [
+//            'name'      => 'James',
+//            'age'       => 20,
+//        ];
+//        $res = $this->inserts($data, $replaceWhen);
+
+        # 当inserts()方法第二个参数为数组时，它的含义为replaceWhen；当为int或string时，含义为status
+        # 当第二个参数的值为true时，replaceWhen=data，如：
+//        $res = $this->inserts($data, true, 'ABNORMAL');
+        # 这行语句执行的流程：先将data作为条件搜索数据（忽略status），若匹配到记录，则将其status更新为1；若
+        # 没有匹配到记录，则按data和status=1插入记录；不管何种情况，返回都是更新/插入的记录的主键值。
+
+
+        return $res;
+    }
 }

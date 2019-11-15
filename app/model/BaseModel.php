@@ -347,17 +347,23 @@ class BaseModel extends Model
     public function inserts(array $data, $replaceWhen = false, $status = null) : int
     {
         if ($this->statusMode) {
+            if (is_int($replaceWhen) || is_string($replaceWhen)) {
+                $status = $replaceWhen;
+            }
+
             $status = is_null($status) ? ($this->_status[0] ?? 0) : $this->getStatus($status);
             $data[$this->statusField] = $status;
         }
 
-        if ($this->statusMode && $replaceWhen !== false) {
+        if ($this->statusMode && ($replaceWhen === true || is_array($replaceWhen))) {
             if ($replaceWhen === true) $replaceWhen = $data;
 
             if ($replaceWhen) {
+                $t = $this->_status;
                 $this->statusAll();
                 $res = $this->getArray($replaceWhen, ['id', 'status']);
                 $_status = $this->getOrigin('status');
+                $this->_status = $t;
 
                 if ($res && $status != $_status) {
                     $id = $res['id'];
@@ -369,7 +375,8 @@ class BaseModel extends Model
             }
         }
 
-        return $this->field(true)->queryInsert($data);
+        $this->queryInstance->field(true);
+        return $this->queryInsert($data);
     }
 
     /**
@@ -380,15 +387,18 @@ class BaseModel extends Model
      * @throws DataBaseException
      * @throws \think\db\exception\DbException
      */
-    public function updates($where = [], array $data = []) : int
+    public function updates($where = [], ?array $data = null) : int
     {
-        $this->parseWhere($where);
+        if (is_null($data)) {
+            $data = $where;
+        } else {
+            $this->parseWhere($where);
+            $this->whereBase($where);
+        }
 
         if ($this->updatedFields) {
             $data = array_intersect_key($data, array_flip($this->updatedFields));
         }
-
-        $this->whereBase($where);
 
         return $this->queryUpdate($data);
     }

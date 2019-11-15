@@ -16,19 +16,19 @@ trait Status
      * 是否开启status模式（仅当表单中存在status字段时允许开启）
      * @var bool
      */
-    public $statusMode = true;
+    protected $statusMode = true;
 
     /**
      * status字段在数据库中的名称
      * @var string
      */
-    public $statusField = 'status';
+    protected $statusField = 'status';
 
     /**
      * 需要筛选的status
      * @var array
      */
-    public $_status = [];
+    protected $_status = [];
 
     /**
      * 全部status
