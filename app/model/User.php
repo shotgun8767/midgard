@@ -252,4 +252,15 @@ class User extends BaseModel
 
         return $res;
     }
+
+    public function getCountCase() : int
+    {
+        $where = [
+            ['age', '>', 16]
+        ];
+
+        $res = $this->getCount($where);     // 获取age>16, status=1的记录的数目
+
+        return $res;
+    }
 }
