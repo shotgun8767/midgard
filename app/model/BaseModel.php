@@ -9,6 +9,7 @@ use think\db\BaseQuery;
 use think\db\Query;
 use think\Model;
 use app\exception\DataBaseException;
+use think\model\Collection;
 
 class BaseModel extends Model
 {
@@ -28,10 +29,10 @@ class BaseModel extends Model
     protected $toArray = false;
 
     /**
-     * 允许被更新字段（null表示无限制）
+     * 允许被更新字段（空数组表示无限制）
      * @var array
      */
-    protected $updatedFields = null;
+    protected $updatedFields = [];
 
     /**
      * 是否获取多条信息
@@ -44,18 +45,6 @@ class BaseModel extends Model
      * @var int|null
      */
     protected $limit = null;
-
-    /**
-     * 查询页码
-     * @var int
-     */
-    protected $page = 1;
-
-    /**
-     * 每页条数
-     * @var int
-     */
-    protected $listRows = 1;
 
     /**
      * 查询实例
@@ -106,24 +95,6 @@ class BaseModel extends Model
     public function refreshQuery() : self
     {
         $this->getNewQuery();
-
-        return $this;
-    }
-
-    /**
-     * Base查询
-     * @param array $where
-     * @return BaseModel
-     */
-    public function whereBase($where = []) : self
-    {
-        $this->parseWhere($where);
-        $this->getQuery()->where($where);
-
-        if ($this->statusMode) {
-            $this->getQuery()
-                ->whereIn($this->getFieldName($this->statusField), $this->_status);
-        }
 
         return $this;
     }
@@ -212,14 +183,45 @@ class BaseModel extends Model
     }
 
     /**
+     * Base查询
+     * @param array $where
+     * @return BaseModel
+     */
+    public function baseWhere($where = []) : self
+    {
+        $this->parseWhere($where);
+        $this->getQuery()->where($where);
+
+        # 处理status
+        if ($this->statusMode && !isset($this->where[$this->statusField])) {
+            $this->getQuery()
+                ->whereIn($this->getFieldName($this->statusField), $this->_status);
+        }
+
+        return $this;
+    }
+
+    /**
+     * 搜索器查询
+     * @param array $data
+     * @param string $prefix
+     * @return BaseModel
+     */
+    public function baseSearch(array $data, string $prefix = '') : self
+    {
+        $this
+            ->getQuery()
+            ->withSearch(array_keys($data), $data, $prefix);
+
+        return $this;
+    }
+
+    /**
      * 获取数据
      * @param array $where
      * @param array $field
      * @return array|\think\Collection|Model|null
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function get($where = [], $field = [])
     {
@@ -237,8 +239,8 @@ class BaseModel extends Model
         }
 
         if (is_int($this->limit)) $query->limit($this->limit);
-        $this->whereBase($where);
-        $models = $this->multi ? $this->querySelect() : $this->queryFind();
+        $this->baseWhere($where);
+        $models = $this->multi ? $this->baseSelect() : $this->baseFind();
 
         if ($this->limit && $models->count() > $this->limit) {
             $models = $models->slice(0, $this->limit);
@@ -253,9 +255,6 @@ class BaseModel extends Model
      * @param array $field
      * @return array|null
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function getArray($where = [], $field = []) : ?array
     {
@@ -273,9 +272,6 @@ class BaseModel extends Model
      * @param bool $origin
      * @return array|mixed|\think\Collection|Model|null
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function getField(string $field, $where = [], $origin = false)
     {
@@ -297,9 +293,6 @@ class BaseModel extends Model
      * @param array $where
      * @return array
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function getColumn(?string $field, $where = []) : array
     {
@@ -330,7 +323,7 @@ class BaseModel extends Model
      */
     public function getCount($where = [])
     {
-        return $this->whereBase($where)->getQuery()->count();
+        return $this->baseWhere($where)->getQuery()->count();
     }
 
     /**
@@ -340,9 +333,6 @@ class BaseModel extends Model
      * @param null $status
      * @return int
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function inserts(array $data, $replaceWhen = false, $status = null) : int
     {
@@ -376,7 +366,7 @@ class BaseModel extends Model
         }
 
         $this->queryInstance->field(true);
-        return $this->queryInsert($data);
+        return $this->baseInsert($data);
     }
 
     /**
@@ -385,22 +375,15 @@ class BaseModel extends Model
      * @param array $data
      * @return int
      * @throws DataBaseException
-     * @throws \think\db\exception\DbException
      */
     public function updates($where = [], ?array $data = null) : int
     {
         if (is_null($data)) {
             $data = $where;
-        } else {
-            $this->parseWhere($where);
-            $this->whereBase($where);
+            $where = [];
         }
 
-        if ($this->updatedFields) {
-            $data = array_intersect_key($data, array_flip($this->updatedFields));
-        }
-
-        return $this->queryUpdate($data);
+        return $this->baseUpdate($data, $this->get($where));
     }
 
     /**
@@ -408,14 +391,13 @@ class BaseModel extends Model
      * @param array $where
      * @return int
      * @throws DataBaseException
-     * @throws \think\db\exception\DbException
      */
     public function destroys($where = []) : int
     {
         $this->parseWhere($where);
-        $this->whereBase($where);
+        $this->baseWhere($where);
 
-        return $this->queryDelete();
+        return $this->baseDelete();
     }
 
     /**
@@ -545,17 +527,18 @@ class BaseModel extends Model
      * @param null $data
      * @return array|Model|null
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
-    protected function queryFind($data = null)
+    protected function baseFind($data = null)
     {
-        if (is_debug()) {
+        $find = function () use ($data){
             return $this->getQuery()->find($data);
+        };
+
+        if (is_debug()) {
+            return $find();
         } else {
             try {
-                return $this->getQuery()->find($data);
+                return $find();
             } catch (Exception $e) {
                 throw new DataBaseException(20001);
             }
@@ -567,17 +550,18 @@ class BaseModel extends Model
      * @param null $data
      * @return \think\Collection
      * @throws DataBaseException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
-    protected function querySelect($data = null)
+    protected function baseSelect($data = null)
     {
-        if (is_debug()) {
+        $select = function () use ($data){
             return $this->getQuery()->select($data);
+        };
+
+        if (is_debug()) {
+            return $select();
         } else {
             try {
-                return $this->getQuery()->select($data);
+                return $select();
             } catch (Exception $e) {
                 throw new DataBaseException(20002);
             }
@@ -587,17 +571,31 @@ class BaseModel extends Model
     /**
      * 更新数据
      * @param array $data
+     * @param $models
      * @return BaseModel|int
      * @throws DataBaseException
-     * @throws \think\db\exception\DbException
      */
-    protected function  queryUpdate(array $data = [])
+    protected function  baseUpdate(array $data, $models)
     {
+        $this->allowField($this->updatedFields);
+
+        $update = function () use ($data, $models){
+            if ($models instanceof Model) {
+                return $models->save($data);
+            } elseif ($models instanceof Collection) {
+                $models->map(function (Model $model) use ($data) {
+                    $model->save($data);
+                });
+                return $models->count();
+            }
+            return 0;
+        };
+
         if (is_debug()) {
-            return $this->getQuery()->field(true)->update($data);
+            return $update();
         } else {
             try {
-                return $this->getQuery()->field(true)->update($data);
+                return $update();
             } catch (Exception $e) {
                 throw new DataBaseException(20003);
             }
@@ -610,13 +608,17 @@ class BaseModel extends Model
      * @return int|string
      * @throws DataBaseException
      */
-    protected function queryInsert(array $data)
+    protected function baseInsert(array $data)
     {
-        if (is_debug()) {
+        $insert = function () use ($data){
             return $this->getQuery()->insertGetId($data);
+        };
+
+        if (is_debug()) {
+            return $insert();
         } else {
             try {
-                return $this->getQuery()->insertGetId($data);
+                return $insert();
             } catch (Exception $e) {
                 throw new DataBaseException(20004);
             }
@@ -628,15 +630,18 @@ class BaseModel extends Model
      * @param array $where
      * @return int
      * @throws DataBaseException
-     * @throws \think\db\exception\DbException
      */
-    protected function queryDelete(array $where = []) : int
+    protected function baseDelete(array $where = []) : int
     {
-        if (is_debug()) {
+        $delete = function () use ($where){
             return $this->getQuery()->where($where)->delete();
+        };
+
+        if (is_debug()) {
+            return $delete();
         } else {
             try {
-                return $this->getQuery()->where($where)->delete();
+                return $delete();
             } catch (Exception $e) {
                 throw new DataBaseException(20005);
             }

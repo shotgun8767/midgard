@@ -44,20 +44,15 @@ trait Status
     public function loadStatus(?string $statusClass = null) : void
     {
         if ($statusClass == null) {
-            // 自动匹配
-            $files = scandir(App::getAppPath() . 'model/status');
-            $className = basename(str_replace('\\', '/', get_called_class()));
-            foreach ($files as $file) {
-                if ($file == "$className.php") {
-                    $class = 'app\model\status\\' . $className;
-                }
+            // 自动匹配并载入模板文件
+            $class = get_called_class();
+            if (substr($class, 0, 10) === 'app\model\\') {
+                $site = substr($class, 10);
+                $path = App::getRootPath() . "app\model\status\\$site.php";
+                $statusClass = file_exists($path) ? "app\model\status\\$site" : Model::class;
             }
-            if (!isset($class)) $class = Model::class;
-        } else {
-            $class = $statusClass;
         }
-
-        $this->Status = (new ReflectionClass($class))->getConstants();
+        $this->Status = (new ReflectionClass($statusClass))->getConstants();
     }
 
     /**
@@ -173,6 +168,6 @@ trait Status
         }
         $data[$this->statusField] = $this->getStatus($status);
 
-        return $this->whereBase($where)->queryUpdate($data);
+        return $this->baseWhere($where)->queryUpdate($data);
     }
 }

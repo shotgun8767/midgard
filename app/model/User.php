@@ -2,6 +2,8 @@
 
 namespace app\model;
 
+use think\db\Query;
+
 class User extends BaseModel
 {
     /**
@@ -118,11 +120,11 @@ class User extends BaseModel
         $this->get(1);
 
         # 错误示范：如果不刷新查询实例，则先前的查询内容不会去除
-        # 此时会向数据库查找主键为1且主键为2的记录，不可能出现这样的记录，故返回null
-        // $res = $this->get(2);
+        # 此时会向数据库查找主键为1且主键为3的记录，不可能出现这样的记录，故返回null
+        // $res = $this->get(3);
 
         # 正确示范
-        $res = $this->refreshQuery()->get(2);
+        $res = $this->refreshQuery()->get(3);
 
         return $res->toArray();
     }
@@ -135,7 +137,7 @@ class User extends BaseModel
 
         $this->get([['age', '<=', '18']]);
 
-        $res = $this->get(['gender' => 0]); // 返回第一条age<=18且gender=0的记录
+        $res = $this->get(['gender' => 0]);     // 返回第一条age<=18且gender=0的记录
 
         return $res->toArray();
     }
@@ -158,7 +160,7 @@ class User extends BaseModel
          *    添加与类名同名的类文件即可（格式见默认模板）；模板中规定了status字段取不同值时的意义，其中比较特殊的是
          *    'DELETED'和'NORMAL'。'NORMAL'是默认的status，不声明目标的状态值时，只获取status值为'NORMAL'对应的
          *    整形的记录；'DELETED'指的是软删除时（即调用'softDelete()'方法时），status字段的修改值。
-         * 3. 关闭status模式：该表单无需使用status模式，在类中添加$statusMode = true即可
+         * 3. 关闭status模式：该表单无需使用status模式，在类中添加$statusMode = false即可
          */
 
         // 软删除gender=0的所有记录
@@ -199,16 +201,16 @@ class User extends BaseModel
     public function updateCase() : int
     {
         /**
-         * 对id=1的记录进行更新：gender字段值更新为0
+         * 对id=1的记录进行更新：gender字段值更新为1
          */
-        $data = ['gender' => 0];
+        $data = ['gender' => 1];
         $res = $this
-            ->updates(1, $data);
+            ->updates(11, $data);
 
         // 另一种写法（比较清晰，推荐）
 //        $res = $this
-//            ->whereBase(1)
-//            ->updateStatus($data);
+//            ->baseWhere(7)
+//            ->updates($data);
 
         return $res;
     }
@@ -249,7 +251,6 @@ class User extends BaseModel
         # 这行语句执行的流程：先将data作为条件搜索数据（忽略status），若匹配到记录，则将其status更新为1；若
         # 没有匹配到记录，则按data和status=1插入记录；不管何种情况，返回都是更新/插入的记录的主键值。
 
-
         return $res;
     }
 
@@ -262,5 +263,41 @@ class User extends BaseModel
         $res = $this->getCount($where);     // 获取age>16, status=1的记录的数目
 
         return $res;
+    }
+
+    public function searchCase() : array
+    {
+        /**
+         * baseSearch() 方法：接入模型搜索器进行查询
+         */
+        return $this->baseSearch(['name' => 'James'])->getArray();
+    }
+
+    public function getGenderAttr($gender)
+    {
+        /**
+         * 获取器：gender字段的值被获取时，会经过此函数加工
+         */
+
+        return $gender == 0 ? "女" : "男";
+    }
+
+    public function setAgeAttr($value)
+    {
+        /**
+         * 修改器：age字段的值被写入数据库时，自增10
+         */
+        return $value + 10;
+    }
+
+    public function setNameAttr($value)
+    {
+        return strtolower($value);
+    }
+
+    public function searchNameAttr($query, $value)
+    {
+        /** @var Query $query */
+        $query->where('name',"x$value");
     }
 }

@@ -43,7 +43,7 @@ trait SoftDelete
                 $this->deleteTime => time()
             ];
             return $this
-                ->whereBase($where)
+                ->baseWhere($where)
                 ->getQuery()
                 ->update($data);
         } else {
